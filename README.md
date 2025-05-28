@@ -1,317 +1,308 @@
-# MultiChannel Notification System
+# 🚀 MultiChannel Notification System
 
-Sistema moderno de notificações multi-canal baseado em microserviços, desenvolvido com .NET 8, Azure Cosmos DB, Azure Service Bus e práticas de Clean Architecture.
+Sistema de notificações multi-canal desenvolvido com arquitetura de microserviços, utilizando .NET 8, Docker, Azure Cosmos DB e Azure Service Bus.
+
+## 📋 Índice
+
+- [Visão Geral](#-visão-geral)
+- [Arquitetura](#-arquitetura)
+- [Tecnologias](#-tecnologias)
+- [Desenvolvimento Local](#-desenvolvimento-local)
+- [Deploy na Azure](#-deploy-na-azure)
+- [Testes](#-testes)
+- [Monitoramento](#-monitoramento)
+- [Contribuição](#-contribuição)
 
 ## 🎯 Visão Geral
 
-Este projeto demonstra a implementação de um sistema de notificações escalável e resiliente, seguindo os princípios SOLID e padrões de microserviços. O sistema suporta múltiplos canais de notificação (Email, SMS, Push) com processamento assíncrono e gerenciamento avançado de preferências de usuários.
+O MultiChannel Notification System é uma solução completa para envio de notificações através de múltiplos canais (Email, SMS, Push, etc.), com gerenciamento de preferências de usuários e processamento assíncrono.
 
-## 🎯 **Destaques da Arquitetura**
+### Funcionalidades Principais
 
-- ✅ **API Gateway Completo**: Ponto único de entrada com todos os endpoints
-- ✅ **Microserviços Internos**: Sem exposição externa, comunicação via rede Docker
-- ✅ **Segurança por Design**: Acesso controlado apenas via Gateway
-- ✅ **Pronto para Produção**: Estrutura escalável e resiliente
-- ✅ **Fácil de Testar**: Collection Insomnia completa incluída
-- ✅ **Zero Dependências**: Repositórios em memória para demonstração
+- ✅ **API Gateway** - Ponto único de entrada para todas as requisições
+- ✅ **Gerenciamento de Notificações** - CRUD completo de notificações
+- ✅ **Gerenciamento de Subscriptions** - Preferências e configurações de usuários
+- ✅ **Processamento Assíncrono** - Worker para processamento de notificações
+- ✅ **Multi-Canal** - Suporte a Email, SMS, Push Notifications
+- ✅ **Monitoramento** - Application Insights e Health Checks
+- ✅ **Containerização** - Docker e Docker Compose
+- ✅ **Infrastructure as Code** - Terraform para Azure
+- ✅ **CI/CD** - Azure DevOps Pipeline
 
 ## 🏗️ Arquitetura
 
+```mermaid
+graph TB
+    Client[Cliente/Insomnia] --> Gateway[Gateway API :5000]
+    
+    Gateway --> NotificationAPI[Notification API]
+    Gateway --> SubscriptionAPI[Subscription API]
+    
+    NotificationAPI --> CosmosDB[(Cosmos DB)]
+    SubscriptionAPI --> CosmosDB
+    
+    NotificationAPI --> ServiceBus[Service Bus]
+    ServiceBus --> ProcessorWorker[Processor Worker]
+    
+    ProcessorWorker --> EmailService[Email Service]
+    ProcessorWorker --> SMSService[SMS Service]
+    ProcessorWorker --> PushService[Push Service]
+    
+    subgraph "Azure Services"
+        CosmosDB
+        ServiceBus
+        AppInsights[Application Insights]
+        ACR[Container Registry]
+    end
+    
+    subgraph "Container Instances"
+        Gateway
+        NotificationAPI
+        SubscriptionAPI
+        ProcessorWorker
+    end
 ```
-                    ┌─────────────────────────┐
-                    │      Cliente/Web        │
-                    │   (Insomnia/Browser)    │
-                    └─────────────┬───────────┘
-                                  │ HTTP
-                                  ▼
-                    ┌─────────────────────────┐
-                    │     Gateway API         │
-                    │    (Port 5000)          │
-                    │  ✅ Ponto Único Entrada │
-                    └─────────────┬───────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    │             │             │
-                    ▼             ▼             ▼
-        ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-        │ Notification API│ │ Subscription API│ │ Processor Worker│
-        │   (Interno)     │ │   (Interno)     │ │   (Interno)     │
-        │ ❌ Sem Porta    │ │ ❌ Sem Porta    │ │ Background Svc  │
-        │    Externa      │ │    Externa      │ │                 │
-        └─────────┬───────┘ └─────────────────┘ └─────────┬───────┘
-                  │                                       │
-                  ▼                                       ▼
-        ┌─────────────────┐                    ┌─────────────────┐
-        │ In-Memory Store │                    │ Message Providers│
-        │  (Demo Mode)    │                    │ Email│SMS│Push  │
-        └─────────────────┘                    └─────────────────┘
-```
 
-### 🔄 **Fluxo de Comunicação:**
-1. **Cliente** → Gateway API (porta 5000)
-2. **Gateway** → Microserviços internos (sem exposição externa)
-3. **Microserviços** → Repositórios/Provedores
+### Componentes
 
-## 🚀 Microserviços
+| Componente | Porta | Descrição |
+|------------|-------|-----------|
+| **Gateway API** | 5000 | API Gateway - ponto único de entrada |
+| **Notification API** | Interna | Microserviço para gerenciamento de notificações |
+| **Subscription API** | Interna | Microserviço para gerenciamento de subscriptions |
+| **Processor Worker** | Interna | Worker para processamento assíncrono |
 
-### 1. 🌐 Gateway API (Porta 5000) - **PONTO ÚNICO DE ENTRADA**
-- **Responsabilidade**: API Gateway completo com todos os endpoints
-- **Tecnologias**: .NET 8, Serilog, Swagger, HttpClient
-- **Funcionalidades**:
-  - ✅ **Todos os endpoints** de Notification e Subscription
-  - ✅ Roteamento inteligente para microserviços internos
-  - ✅ Health checks centralizados
-  - ✅ Logging estruturado com correlação
-  - ✅ Documentação Swagger unificada
-  - ✅ Tratamento de erros centralizado
-
-### 2. 📧 Notification API (Interno - Sem Porta Externa)
-- **Responsabilidade**: Gerenciamento do ciclo de vida das notificações
-- **Tecnologias**: .NET 8, In-Memory Repository (demo), Azure Service Bus
-- **Funcionalidades**:
-  - ✅ CRUD completo de notificações
-  - ✅ Enfileiramento para processamento assíncrono
-  - ✅ Rastreamento de status em tempo real
-  - ✅ Suporte a múltiplos canais (Email, SMS, Push)
-  - ✅ Sistema de prioridades
-  - ⚠️ **Acesso apenas via Gateway**
-
-### 3. ⚙️ Subscription API (Interno - Sem Porta Externa)
-- **Responsabilidade**: Gerenciamento avançado de preferências
-- **Tecnologias**: .NET 8, In-Memory Repository (demo)
-- **Funcionalidades**:
-  - ✅ Preferências granulares por canal
-  - ✅ Categorização inteligente de notificações
-  - ✅ Horários de silêncio com timezone
-  - ✅ Validações de preferências em tempo real
-  - ✅ Sistema de subscrições flexível
-  - ⚠️ **Acesso apenas via Gateway**
-
-### 4. 🔄 Processor Worker (Background Service)
-- **Responsabilidade**: Processamento assíncrono e entrega
-- **Tecnologias**: .NET 8 Worker Service, Provedores simulados
-- **Funcionalidades**:
-  - ✅ Processamento assíncrono de notificações
-  - ✅ Integração com provedores simulados
-  - ✅ Validação de preferências antes do envio
-  - ✅ Tratamento robusto de erros e retry
-  - ✅ Modo simulação para desenvolvimento
-
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Tecnologias
 
 ### Backend
-- **.NET 8**: Framework principal
-- **Azure Cosmos DB**: Banco de dados NoSQL
-- **Azure Service Bus**: Mensageria assíncrona
-- **Serilog**: Logging estruturado
+- **.NET 8** - Framework principal
+- **ASP.NET Core** - APIs REST
+- **Entity Framework Core** - ORM
+- **Serilog** - Logging estruturado
+- **Swagger/OpenAPI** - Documentação da API
 
-- **Swagger/OpenAPI**: Documentação de APIs
+### Infraestrutura
+- **Docker & Docker Compose** - Containerização
+- **Azure Container Registry** - Registry de imagens
+- **Azure Container Instances** - Hospedagem de containers
+- **Azure Cosmos DB** - Banco de dados NoSQL
+- **Azure Service Bus** - Mensageria
+- **Azure Application Insights** - Monitoramento
 
-### DevOps & Infraestrutura
-- **Docker**: Containerização
-- **Docker Compose**: Orquestração local
-- **Terraform**: Infrastructure as Code (planejado)
-- **Azure DevOps**: CI/CD (planejado)
+### DevOps
+- **Terraform** - Infrastructure as Code
+- **Azure DevOps** - CI/CD Pipeline
+- **GitHub Actions** - Automação (alternativa)
 
-### Princípios e Padrões
-- **SOLID**: Princípios de design
-- **Clean Architecture**: Arquitetura limpa
-- **Microserviços**: Arquitetura distribuída
-- **Domain-Driven Design**: Modelagem de domínio
-- **CQRS**: Separação de comandos e consultas
-
-## 🚀 Como Executar
+## 🚀 Desenvolvimento Local
 
 ### Pré-requisitos
-- .NET 8 SDK
-- Docker Desktop
-- Visual Studio 2022 ou VS Code
 
-### Execução Local com Docker
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Git](https://git-scm.com/)
 
-1. **Clone o repositório**:
+### Executando Localmente
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/seu-usuario/MultiChannel-Notification-System.git
+   cd MultiChannel-Notification-System
+   ```
+
+2. **Suba os containers**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Verifique se os serviços estão rodando**
+   ```bash
+   docker-compose ps
+   ```
+
+4. **Acesse os serviços**
+   - Gateway API: http://localhost:5000
+   - Swagger UI: http://localhost:5000/swagger
+   - Health Check: http://localhost:5000/health
+
+### Testando a API
+
+1. **Importe a collection do Insomnia**
+   - Arquivo: `docs/insomnia-collection.json`
+   - Environment: "Base Environment" (local)
+
+2. **Teste os endpoints principais**
+   ```bash
+   # Health Check
+   curl http://localhost:5000/health
+   
+   # Criar notificação
+   curl -X POST http://localhost:5000/api/notification \
+     -H "Content-Type: application/json" \
+     -d '{"userId":"user123","title":"Teste","message":"Funcionando!","channels":["Email"],"category":"System","priority":"Medium"}'
+   
+   # Buscar notificações do usuário
+   curl http://localhost:5000/api/notification/user/user123
+   ```
+
+## ☁️ Deploy na Azure
+
+### Pré-requisitos
+
+- [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+- [Terraform](https://www.terraform.io/downloads.html)
+- Subscription do Azure ativa
+
+### Deploy Automatizado
+
+1. **Execute o script de deploy**
+   ```bash
+   chmod +x scripts/deploy-azure.sh
+   ./scripts/deploy-azure.sh
+   ```
+
+2. **Siga as instruções do script**
+   - Login na Azure
+   - Seleção da subscription
+   - Configuração das variáveis
+
+### Deploy Manual
+
+1. **Configure as credenciais do Azure**
+   ```bash
+   az login
+   az account set --subscription "sua-subscription-id"
+   ```
+
+2. **Configure as variáveis do Terraform**
+   ```bash
+   cd infrastructure/terraform
+   cp terraform.tfvars.example terraform.tfvars
+   # Edite o arquivo terraform.tfvars com suas configurações
+   ```
+
+3. **Execute o Terraform**
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+4. **Faça build e push das imagens**
+   ```bash
+   # Build local
+   docker-compose build
+   
+   # Login no ACR
+   az acr login --name seu-acr-name
+   
+   # Tag e push das imagens
+   docker tag multichannel-notification-system-gateway-api:latest seu-acr.azurecr.io/gateway-api:latest
+   docker push seu-acr.azurecr.io/gateway-api:latest
+   # Repita para todas as imagens
+   ```
+
+### Configuração do CI/CD
+
+1. **Configure o Azure DevOps**
+   - Importe o repositório
+   - Configure as service connections
+   - Execute o pipeline `azure-pipelines.yml`
+
+2. **Variáveis necessárias**
+   - `azureServiceConnection`
+   - `dockerRegistryServiceConnection`
+   - `acrLoginServer`
+
+## 🧪 Testes
+
+### Testes Locais
+
 ```bash
-git clone https://github.com/seu-usuario/MultiChannel-Notification-System.git
-cd MultiChannel-Notification-System
+# Executar todos os testes
+dotnet test
+
+# Executar com coverage
+dotnet test --collect:"XPlat Code Coverage"
 ```
 
-2. **Build e execução**:
+### Testes de Integração
+
 ```bash
-docker-compose up --build
+# Com o sistema rodando localmente
+dotnet test tests/IntegrationTests/ --environment Local
+
+# Contra ambiente Azure
+dotnet test tests/IntegrationTests/ --environment Azure
 ```
 
-3. **Acesse o sistema**:
-- **Gateway API (ÚNICO PONTO DE ENTRADA)**: http://localhost:5000/swagger
-- **Health Check**: http://localhost:5000/health
-- ⚠️ **Microserviços internos não são acessíveis diretamente**
+### Collection do Insomnia
 
-### Execução Local com .NET
+A collection completa está disponível em `docs/insomnia-collection.json` com:
 
-1. **Restaurar dependências**:
-```bash
-dotnet restore
-```
+- ✅ Todos os endpoints funcionais
+- ✅ Variáveis de ambiente (Local e Azure)
+- ✅ Exemplos de requests
+- ✅ Testes automatizados
 
-2. **Build da solução**:
-```bash
-dotnet build
-```
+## 📊 Monitoramento
 
-3. **Executar cada serviço** (em terminais separados):
-```bash
-# Gateway API
-cd src/Services/Gateway.API
-dotnet run
+### Application Insights
 
-# Notification API
-cd src/Services/Notification.API
-dotnet run
+- **Métricas**: Performance, disponibilidade, uso
+- **Logs**: Logs estruturados de todos os serviços
+- **Alertas**: Configurados para falhas e performance
 
-# Subscription API
-cd src/Services/Subscription.API
-dotnet run
+### Health Checks
 
-# Processor Worker
-cd src/Services/Processor.Worker
-dotnet run
-```
+- Gateway API: `/health`
+- Notification API: `/health`
+- Subscription API: `/health`
 
-## 📋 Funcionalidades Principais
+### Dashboards
 
-### Gerenciamento de Notificações
-- ✅ Criação de notificações multi-canal
-- ✅ Agendamento de notificações
-- ✅ Rastreamento de status em tempo real
-- ✅ Suporte a prioridades (Low, Normal, High, Critical)
-- ✅ Metadados customizáveis
-
-### Preferências de Usuários
-- ✅ Configuração por canal (Email, SMS, Push)
-- ✅ Categorização (Marketing, Transactional, Security, System)
-- ✅ Horários de silêncio com timezone
-- ✅ Validações inteligentes
-
-### Processamento Assíncrono
-- ✅ Consumo de mensagens do Service Bus
-- ✅ Tratamento robusto de erros
-- ✅ Dead Letter Queue para falhas
-- ✅ Modo simulação para desenvolvimento
-
-### Provedores de Notificação
-- ✅ Email Provider (simulado - pronto para SendGrid/AWS SES)
-- ✅ SMS Provider (simulado - pronto para Twilio/AWS SNS)
-- ✅ Push Provider (simulado - pronto para Firebase/APNS)
+Acesse o Azure Portal para visualizar:
+- Métricas de performance
+- Logs de aplicação
+- Alertas configurados
 
 ## 🔧 Configuração
 
 ### Variáveis de Ambiente
 
-```bash
-# Cosmos DB
-ConnectionStrings__CosmosDB=AccountEndpoint=...;AccountKey=...
-
-# Service Bus
-ConnectionStrings__ServiceBus=Endpoint=sb://...;SharedAccessKeyName=...;SharedAccessKey=...
-
-# APIs
+#### Desenvolvimento Local
+```env
+ASPNETCORE_ENVIRONMENT=Development
 Services__NotificationAPI=http://notification-api
 Services__SubscriptionAPI=http://subscription-api
 ```
 
-### Docker Compose
-
-O arquivo `docker-compose.yml` está configurado para desenvolvimento local com:
-- ✅ **Rede compartilhada** entre serviços
-- ✅ **Variáveis de ambiente** pré-configuradas
-- ✅ **Apenas Gateway exposto** (porta 5000)
-- ✅ **Microserviços internos** sem exposição externa
-- ✅ **Dependências** entre serviços configuradas
-- ✅ **Repositórios em memória** para demonstração
-
-## 📊 Monitoramento e Observabilidade
-
-### Logging
-- **Serilog** com templates estruturados
-- **Correlação** de requests entre serviços
-- **Níveis apropriados** por componente
-- **Formato JSON** para análise
-
-### Health Checks
-- Endpoints `/health` em todas as APIs
-- Verificação de dependências externas
-- Status dos provedores de notificação
-- Integração com Docker HEALTHCHECK
-
-### Métricas (Planejado)
-- Application Insights
-- Prometheus + Grafana
-- Métricas de negócio e técnicas
-
-## 🧪 Testes
-
-### 🚀 **Collection Insomnia (Disponível)**
-- ✅ **Collection completa** para testes de todos os endpoints
-- ✅ **Arquivo**: `insomnia-collection.json`
-- ✅ **Guia detalhado**: `INSOMNIA_GUIDE.md`
-- ✅ **Cenários de teste** pré-configurados
-- ✅ **Variáveis de ambiente** configuradas
-- ✅ **Fluxos completos** de notificação
-
-**Como usar:**
-1. Importe `insomnia-collection.json` no Insomnia
-2. Siga o guia em `INSOMNIA_GUIDE.md`
-3. Execute os cenários de teste
-4. Todos os requests passam pelo Gateway (porta 5000)
-
-### Estrutura de Testes (Planejado)
-```
-tests/
-├── Unit/
-│   ├── Gateway.API.Tests/
-│   ├── Notification.API.Tests/
-│   ├── Subscription.API.Tests/
-│   └── Processor.Worker.Tests/
-├── Integration/
-│   └── MultiChannel.Integration.Tests/
-└── E2E/
-    └── MultiChannel.E2E.Tests/
+#### Produção Azure
+```env
+ASPNETCORE_ENVIRONMENT=Production
+ConnectionStrings__CosmosDB=sua-connection-string
+ConnectionStrings__ServiceBus=sua-connection-string
+APPLICATIONINSIGHTS_CONNECTION_STRING=sua-connection-string
 ```
 
-### Tipos de Testes
-- **Unit Tests**: Testes unitários com xUnit
-- **Integration Tests**: Testes de integração com TestContainers
-- **E2E Tests**: Testes end-to-end com Playwright
-- **Load Tests**: Testes de carga com NBomber
+### Configurações do Terraform
 
-## 🚀 Roadmap
+Principais variáveis em `terraform.tfvars`:
 
-### Fase 1 - MVP ✅
-- [x] **Arquitetura de microserviços** completa
-- [x] **API Gateway** como ponto único de entrada
-- [x] **APIs RESTful** com todos os endpoints
-- [x] **Processamento assíncrono** funcional
-- [x] **Containerização** com Docker Compose
-- [x] **Collection Insomnia** para testes
-- [x] **Repositórios em memória** para demonstração
-- [x] **Documentação** completa e atualizada
+```hcl
+environment = "prod"
+location = "East US"
+container_cpu = 1.0
+container_memory = 2.0
+cosmos_throughput = 1000
+servicebus_sku = "Standard"
+```
 
-### Fase 2 - Produção 🔄
-- [ ] Integração com provedores reais
-- [ ] Testes automatizados
-- [ ] CI/CD com Azure DevOps
-- [ ] Infrastructure as Code (Terraform)
+## 📚 Documentação Adicional
 
-### Fase 3 - Escala 📋
-- [ ] Auto-scaling
-- [ ] Métricas avançadas
-- [ ] Distributed tracing
-- [ ] Event sourcing
-
-### Fase 4 - Inteligência 🔮
-- [ ] Machine Learning para otimização
-- [ ] A/B testing
-- [ ] Personalização inteligente
-- [ ] Analytics avançados
+- [Guia do Insomnia](docs/INSOMNIA_GUIDE.md)
+- [Arquitetura Detalhada](docs/ARCHITECTURE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 ## 🤝 Contribuição
 
@@ -323,15 +314,18 @@ tests/
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
-## 👨‍💻 Autor
+## 👥 Autores
 
-**Seu Nome**
-- LinkedIn: [seu-perfil](https://linkedin.com/in/seu-perfil)
-- GitHub: [@seu-usuario](https://github.com/seu-usuario)
-- Email: seu.email@exemplo.com
+- **Seu Nome** - *Desenvolvimento inicial* - [SeuGitHub](https://github.com/seu-usuario)
+
+## 🙏 Agradecimentos
+
+- Equipe de DevOps
+- Comunidade .NET
+- Microsoft Azure
 
 ---
 
-⭐ **Se este projeto foi útil para você, considere dar uma estrela!** ⭐
+**Status do Projeto**: ✅ Funcional | 🚀 Em Produção | 📈 Em Desenvolvimento Ativo

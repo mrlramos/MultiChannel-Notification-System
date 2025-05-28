@@ -1,0 +1,35 @@
+# Exemplo de arquivo terraform.tfvars
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+
+# Configurações do ambiente
+environment = "dev"  # dev, staging, prod
+location    = "East US"  # Região do Azure
+
+# Credenciais do Azure (obtenha via Azure CLI ou Service Principal)
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "00000000-0000-0000-0000-000000000000"
+client_id       = "00000000-0000-0000-0000-000000000000"
+client_secret   = "your-client-secret-here"
+
+# Configurações de recursos
+container_cpu    = 0.5   # CPU por container
+container_memory = 1.5   # Memória em GB por container
+
+# Configurações de monitoramento
+enable_monitoring = true
+
+# Configurações do Cosmos DB
+cosmos_throughput = 400  # RU/s
+
+# Configurações do Service Bus
+servicebus_sku = "Standard"  # Basic, Standard, Premium
+
+# IPs permitidos (para desenvolvimento - restringir em produção)
+allowed_ips = ["0.0.0.0/0"]
+
+# Tags adicionais
+tags = {
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Project     = "MultiChannel Notifications"
+} 

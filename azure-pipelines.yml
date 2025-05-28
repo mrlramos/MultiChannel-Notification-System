@@ -1,0 +1,257 @@
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - src/*
+    - infrastructure/*
+    - azure-pipelines.yml
+
+pr:
+  branches:
+    include:
+    - main
+    - develop
+
+variables:
+  # Build Configuration
+  buildConfiguration: 'Release'
+  dockerRegistryServiceConnection: 'acr-connection'
+  imageRepository: 'multichannel-notification'
+  containerRegistry: '$(acrLoginServer)'
+  dockerfilePath: '$(Build.SourcesDirectory)'
+  tag: '$(Build.BuildId)'
+  
+  # Azure Configuration
+  azureServiceConnection: 'azure-service-connection'
+  resourceGroupName: 'multichannel-notification-$(environment)-rg'
+  location: 'East US'
+  
+  # Terraform Configuration
+  terraformVersion: '1.5.0'
+  terraformWorkingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure/terraform'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: Build
+    displayName: 'Build Application'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Use .NET 8 SDK'
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet packages'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'Build solution'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'Run unit tests'
+      inputs:
+        command: 'test'
+        projects: '**/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
+        
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+- stage: BuildImages
+  displayName: 'Build Docker Images'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: BuildDockerImages
+    displayName: 'Build and Push Docker Images'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    - task: Docker@2
+      displayName: 'Build Gateway API Image'
+      inputs:
+        containerRegistry: '$(dockerRegistryServiceConnection)'
+        repository: 'gateway-api'
+        command: 'buildAndPush'
+        Dockerfile: 'src/Services/Gateway.API/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(tag)
+          latest
+          
+    - task: Docker@2
+      displayName: 'Build Notification API Image'
+      inputs:
+        containerRegistry: '$(dockerRegistryServiceConnection)'
+        repository: 'notification-api'
+        command: 'buildAndPush'
+        Dockerfile: 'src/Services/Notification.API/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(tag)
+          latest
+          
+    - task: Docker@2
+      displayName: 'Build Subscription API Image'
+      inputs:
+        containerRegistry: '$(dockerRegistryServiceConnection)'
+        repository: 'subscription-api'
+        command: 'buildAndPush'
+        Dockerfile: 'src/Services/Subscription.API/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(tag)
+          latest
+          
+    - task: Docker@2
+      displayName: 'Build Processor Worker Image'
+      inputs:
+        containerRegistry: '$(dockerRegistryServiceConnection)'
+        repository: 'processor-worker'
+        command: 'buildAndPush'
+        Dockerfile: 'src/Services/Processor.Worker/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(tag)
+          latest
+
+- stage: Infrastructure
+  displayName: 'Deploy Infrastructure'
+  dependsOn: BuildImages
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployInfrastructure
+    displayName: 'Deploy Azure Infrastructure'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'production'
+    
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '$(terraformVersion)'
+              
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(terraformWorkingDirectory)'
+              backendServiceArm: '$(azureServiceConnection)'
+              backendAzureRmResourceGroupName: 'terraform-state-rg'
+              backendAzureRmStorageAccountName: 'terraformstate$(Build.BuildId)'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'terraform.tfstate'
+              
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Plan'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              workingDirectory: '$(terraformWorkingDirectory)'
+              environmentServiceNameAzureRM: '$(azureServiceConnection)'
+              commandOptions: '-var="environment=prod" -var="location=$(location)" -out=tfplan'
+              
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: '$(terraformWorkingDirectory)'
+              environmentServiceNameAzureRM: '$(azureServiceConnection)'
+              commandOptions: 'tfplan'
+
+- stage: Deploy
+  displayName: 'Deploy Application'
+  dependsOn: Infrastructure
+  condition: succeeded()
+  jobs:
+  - deployment: DeployApplication
+    displayName: 'Deploy to Azure Container Instances'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'production'
+    
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Update Container Images'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Update Gateway API
+                az container restart --resource-group $(resourceGroupName) --name multichannel-notification-prod-gateway
+                
+                # Update Notification API
+                az container restart --resource-group $(resourceGroupName) --name multichannel-notification-prod-notification
+                
+                # Update Subscription API
+                az container restart --resource-group $(resourceGroupName) --name multichannel-notification-prod-subscription
+                
+                # Update Processor Worker
+                az container restart --resource-group $(resourceGroupName) --name multichannel-notification-prod-processor
+
+- stage: Test
+  displayName: 'Integration Tests'
+  dependsOn: Deploy
+  condition: succeeded()
+  jobs:
+  - job: IntegrationTests
+    displayName: 'Run Integration Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Get Gateway URL'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          GATEWAY_URL=$(az container show --resource-group $(resourceGroupName) --name multichannel-notification-prod-gateway --query ipAddress.fqdn -o tsv)
+          echo "##vso[task.setvariable variable=gatewayUrl]http://$GATEWAY_URL"
+          
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Integration Tests'
+      inputs:
+        command: 'test'
+        projects: '**/*IntegrationTests.csproj'
+        arguments: '--configuration $(buildConfiguration) --logger trx --collect:"XPlat Code Coverage"'
+      env:
+        GATEWAY_URL: $(gatewayUrl)
+        
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '**/*.trx' 

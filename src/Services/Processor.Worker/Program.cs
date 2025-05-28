@@ -2,8 +2,6 @@ using Processor.Worker.Workers;
 using Processor.Worker.Services;
 using Processor.Worker.Providers;
 using Serilog;
-using Polly;
-using Polly.Extensions.Http;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -11,13 +9,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddSerilog((services, configuration) =>
     configuration.ReadFrom.Configuration(builder.Configuration));
 
-// Configurar HttpClient com Polly
+// Configurar HttpClient
 builder.Services.AddHttpClient<INotificationProcessor, NotificationProcessor>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
-//.AddPolicyHandler(GetRetryPolicy())
-//.AddPolicyHandler(GetCircuitBreakerPolicy());
 
 // Configurar HttpClients para provedores
 builder.Services.AddHttpClient<EmailProvider>();
@@ -71,33 +67,4 @@ finally
     Log.CloseAndFlush();
 }
 
-static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-{
-    return HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .WaitAndRetryAsync(
-            retryCount: 3,
-            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-            onRetry: (outcome, timespan, retryCount, context) =>
-            {
-                Console.WriteLine($"🔄 HTTP Retry {retryCount} em {timespan.TotalSeconds}s: {outcome.Exception?.Message}");
-            });
-}
-
-static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
-{
-    return HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .CircuitBreakerAsync(
-            handledEventsAllowedBeforeBreaking: 5,
-            durationOfBreak: TimeSpan.FromSeconds(30),
-            onBreak: (exception, duration) =>
-            {
-                Log.Warning("🔌 Circuit Breaker ABERTO por {Duration}s: {Exception}", 
-                    duration.TotalSeconds, exception.Exception?.Message);
-            },
-            onReset: () =>
-            {
-                Log.Information("🔌 Circuit Breaker FECHADO - Conexões restauradas");
-            });
-} 
+ 

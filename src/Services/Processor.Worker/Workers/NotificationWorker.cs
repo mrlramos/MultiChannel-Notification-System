@@ -2,8 +2,6 @@ using Azure.Messaging.ServiceBus;
 using Processor.Worker.Models;
 using Processor.Worker.Services;
 using System.Text.Json;
-using Polly;
-using Polly.Extensions.Http;
 
 namespace Processor.Worker.Workers;
 
@@ -136,14 +134,13 @@ public class NotificationWorker : BackgroundService
                 return;
             }
 
-            // Processar com retry policy
-            var retryPolicy = GetRetryPolicy();
-            var result = await retryPolicy.ExecuteAsync(async () =>
+            // Processar notificação
+            ProcessingResult result;
+            using (var scope = _serviceProvider.CreateScope())
             {
-                using var scope = _serviceProvider.CreateScope();
                 var processor = scope.ServiceProvider.GetRequiredService<INotificationProcessor>();
-                return await processor.ProcessNotificationAsync(notificationMessage, args.CancellationToken);
-            });
+                result = await processor.ProcessNotificationAsync(notificationMessage, args.CancellationToken);
+            }
 
             if (result.Success)
             {
@@ -255,14 +252,5 @@ public class NotificationWorker : BackgroundService
         _logger.LogInformation("🎭 Modo simulação finalizado");
     }
 
-    private static IAsyncPolicy GetRetryPolicy()
-    {
-        return Policy
-            .Handle<HttpRequestException>()
-            .Or<TaskCanceledException>()
-            .Or<InvalidOperationException>()
-            .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))); // Exponential backoff
-    }
+
 } 

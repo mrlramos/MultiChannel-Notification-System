@@ -65,11 +65,11 @@ Este projeto demonstra a implementação de um sistema de notificações escalá
 
 ### 4. Processor Worker
 - **Responsabilidade**: Processamento assíncrono de notificações
-- **Tecnologias**: .NET 8 Worker Service, Polly, Azure Service Bus
+- **Tecnologias**: .NET 8 Worker Service, Azure Service Bus
 - **Funcionalidades**:
   - Consumo de mensagens do Service Bus
   - Integração com provedores externos
-  - Retry policies e circuit breakers
+  - Tratamento robusto de erros
   - Modo simulação para desenvolvimento
 
 ## 🛠️ Tecnologias Utilizadas
@@ -79,7 +79,7 @@ Este projeto demonstra a implementação de um sistema de notificações escalá
 - **Azure Cosmos DB**: Banco de dados NoSQL
 - **Azure Service Bus**: Mensageria assíncrona
 - **Serilog**: Logging estruturado
-- **Polly**: Resilência e retry policies
+
 - **Swagger/OpenAPI**: Documentação de APIs
 
 ### DevOps & Infraestrutura
@@ -168,8 +168,7 @@ dotnet run
 
 ### Processamento Assíncrono
 - ✅ Consumo de mensagens do Service Bus
-- ✅ Retry policies com exponential backoff
-- ✅ Circuit breakers para proteção
+- ✅ Tratamento robusto de erros
 - ✅ Dead Letter Queue para falhas
 - ✅ Modo simulação para desenvolvimento
 

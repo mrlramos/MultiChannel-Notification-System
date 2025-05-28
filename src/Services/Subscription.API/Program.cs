@@ -5,6 +5,9 @@ using Subscription.API.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar URLs
+builder.WebHost.UseUrls("http://0.0.0.0:80");
+
 // Configurar Serilog
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
@@ -44,7 +47,7 @@ builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
 });
 
 // Registrar serviços de domínio
-builder.Services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 var app = builder.Build();

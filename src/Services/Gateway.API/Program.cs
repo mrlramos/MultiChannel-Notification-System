@@ -2,6 +2,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar URLs
+builder.WebHost.UseUrls("http://0.0.0.0:80");
+
 // Configurar Serilog
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
@@ -46,6 +49,9 @@ builder.Services.AddHttpClient("SubscriptionAPI", client =>
 
 var app = builder.Build();
 
+// Log de inicialização
+app.Logger.LogInformation("Gateway API iniciando...");
+
 // Pipeline de requisições
 if (app.Environment.IsDevelopment())
 {
@@ -61,5 +67,7 @@ app.UseHealthChecks("/health");
 app.UseSerilogRequestLogging();
 app.UseCors("AllowAll");
 app.MapControllers();
+
+app.Logger.LogInformation("Gateway API configurado. Iniciando servidor...");
 
 app.Run();

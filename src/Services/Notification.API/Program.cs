@@ -6,6 +6,9 @@ using Notification.API.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar URLs
+builder.WebHost.UseUrls("http://0.0.0.0:80");
+
 // Configurar Serilog
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
@@ -52,7 +55,7 @@ builder.Services.AddSingleton<ServiceBusClient>(serviceProvider =>
 });
 
 // Registrar serviços de domínio
-builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IMessageQueueService, ServiceBusMessageQueueService>();
 

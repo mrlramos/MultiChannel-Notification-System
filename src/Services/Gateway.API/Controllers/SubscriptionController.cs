@@ -53,7 +53,7 @@ public class SubscriptionController : ControllerBase
             _logger.LogInformation("Gateway: Buscando subscrição do usuário {UserId}", userId);
 
             var httpClient = _httpClientFactory.CreateClient("SubscriptionAPI");
-            var response = await httpClient.GetAsync($"api/subscription/{userId}");
+            var response = await httpClient.GetAsync($"api/subscription/user/{userId}");
             var result = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -81,7 +81,7 @@ public class SubscriptionController : ControllerBase
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await httpClient.PutAsync($"api/subscription/{userId}", content);
+            var response = await httpClient.PutAsync($"api/subscription/user/{userId}", content);
             var result = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -106,7 +106,7 @@ public class SubscriptionController : ControllerBase
             _logger.LogInformation("Gateway: Deletando subscrição do usuário {UserId}", userId);
 
             var httpClient = _httpClientFactory.CreateClient("SubscriptionAPI");
-            var response = await httpClient.DeleteAsync($"api/subscription/{userId}");
+            var response = await httpClient.DeleteAsync($"api/subscription/user/{userId}");
 
             if (response.IsSuccessStatusCode)
             {

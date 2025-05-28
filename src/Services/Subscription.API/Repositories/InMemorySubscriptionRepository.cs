@@ -26,6 +26,17 @@ public class InMemorySubscriptionRepository : ISubscriptionRepository
         return subscription;
     }
 
+    public async Task<SubscriptionModel?> GetByIdAsync(string id, string userId)
+    {
+        await Task.Delay(10); // Simular operação assíncrona
+        _subscriptions.TryGetValue(userId, out var subscription);
+        
+        if (subscription?.Id == id)
+            return subscription;
+            
+        return null;
+    }
+
     public async Task<SubscriptionModel> UpdateAsync(SubscriptionModel subscription)
     {
         subscription.UpdatedAt = DateTime.UtcNow;
@@ -35,10 +46,20 @@ public class InMemorySubscriptionRepository : ISubscriptionRepository
         return subscription;
     }
 
-    public async Task<bool> DeleteAsync(string userId)
+    public async Task DeleteAsync(string id, string userId)
     {
         await Task.Delay(10); // Simular operação assíncrona
-        return _subscriptions.TryRemove(userId, out _);
+        
+        if (_subscriptions.TryGetValue(userId, out var subscription) && subscription.Id == id)
+        {
+            _subscriptions.TryRemove(userId, out _);
+        }
+    }
+
+    public async Task<IEnumerable<SubscriptionModel>> GetActiveSubscriptionsAsync()
+    {
+        await Task.Delay(10); // Simular operação assíncrona
+        return _subscriptions.Values.Where(s => s.IsActive).ToList();
     }
 
     public async Task<bool> ExistsAsync(string userId)

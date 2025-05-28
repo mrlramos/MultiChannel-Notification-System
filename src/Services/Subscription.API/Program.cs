@@ -1,5 +1,4 @@
 using Serilog;
-using Microsoft.Azure.Cosmos;
 using Subscription.API.Services;
 using Subscription.API.Repositories;
 
@@ -39,14 +38,7 @@ builder.Services.AddCors(options =>
 // Adicionar Health Checks
 builder.Services.AddHealthChecks();
 
-// Configurar Azure Cosmos DB
-builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("CosmosDB");
-    return new CosmosClient(connectionString ?? "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
-});
-
-// Registrar serviços de domínio
+// Registrar serviços de domínio (usando implementações em memória)
 builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 

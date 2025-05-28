@@ -19,11 +19,15 @@ public class InMemoryNotificationRepository : INotificationRepository
         return notification;
     }
 
-    public async Task<NotificationModel?> GetByIdAsync(string id)
+    public async Task<NotificationModel?> GetByIdAsync(string id, string userId)
     {
         await Task.Delay(10); // Simular operação assíncrona
         _notifications.TryGetValue(id, out var notification);
-        return notification;
+        
+        if (notification?.UserId == userId)
+            return notification;
+            
+        return null;
     }
 
     public async Task<IEnumerable<NotificationModel>> GetByUserIdAsync(string userId)
@@ -41,9 +45,19 @@ public class InMemoryNotificationRepository : INotificationRepository
         return notification;
     }
 
-    public async Task<bool> DeleteAsync(string id)
+    public async Task DeleteAsync(string id, string userId)
     {
         await Task.Delay(10); // Simular operação assíncrona
-        return _notifications.TryRemove(id, out _);
+        
+        if (_notifications.TryGetValue(id, out var notification) && notification.UserId == userId)
+        {
+            _notifications.TryRemove(id, out _);
+        }
+    }
+
+    public async Task<IEnumerable<NotificationModel>> GetPendingNotificationsAsync()
+    {
+        await Task.Delay(10); // Simular operação assíncrona
+        return _notifications.Values.Where(n => n.Status == NotificationStatus.Pending).ToList();
     }
 } 

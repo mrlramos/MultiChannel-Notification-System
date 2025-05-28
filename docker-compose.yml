@@ -23,8 +23,7 @@ services:
       context: ./src/Services/Notification.API
       dockerfile: Dockerfile
     container_name: notification-api
-    ports:
-      - "5001:80"
+    # Porta removida - acesso apenas interno via Gateway
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__CosmosDB=AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
@@ -37,8 +36,7 @@ services:
       context: ./src/Services/Subscription.API
       dockerfile: Dockerfile
     container_name: subscription-api
-    ports:
-      - "5002:80"
+    # Porta removida - acesso apenas interno via Gateway
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__CosmosDB=AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==

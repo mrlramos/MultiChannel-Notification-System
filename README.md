@@ -6,71 +6,96 @@ Sistema moderno de notificações multi-canal baseado em microserviços, desenvo
 
 Este projeto demonstra a implementação de um sistema de notificações escalável e resiliente, seguindo os princípios SOLID e padrões de microserviços. O sistema suporta múltiplos canais de notificação (Email, SMS, Push) com processamento assíncrono e gerenciamento avançado de preferências de usuários.
 
+## 🎯 **Destaques da Arquitetura**
+
+- ✅ **API Gateway Completo**: Ponto único de entrada com todos os endpoints
+- ✅ **Microserviços Internos**: Sem exposição externa, comunicação via rede Docker
+- ✅ **Segurança por Design**: Acesso controlado apenas via Gateway
+- ✅ **Pronto para Produção**: Estrutura escalável e resiliente
+- ✅ **Fácil de Testar**: Collection Insomnia completa incluída
+- ✅ **Zero Dependências**: Repositórios em memória para demonstração
+
 ## 🏗️ Arquitetura
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Gateway API   │    │ Notification API│    │ Subscription API│
-│   (Port 5000)   │    │   (Port 5001)   │    │   (Port 5002)   │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                    ┌─────────────▼───────────┐
-                    │   Azure Service Bus    │
-                    │     (Messaging)        │
+                    ┌─────────────────────────┐
+                    │      Cliente/Web        │
+                    │   (Insomnia/Browser)    │
                     └─────────────┬───────────┘
-                                 │
-                    ┌─────────────▼───────────┐
-                    │   Processor Worker     │
-                    │  (Background Service)  │
+                                  │ HTTP
+                                  ▼
+                    ┌─────────────────────────┐
+                    │     Gateway API         │
+                    │    (Port 5000)          │
+                    │  ✅ Ponto Único Entrada │
                     └─────────────┬───────────┘
-                                 │
-        ┌────────────────────────┼────────────────────────┐
-        │                       │                        │
-┌───────▼───────┐    ┌──────────▼──────────┐    ┌────────▼────────┐
-│ Email Provider│    │   SMS Provider      │    │  Push Provider  │
-│   (SendGrid)  │    │    (Twilio)         │    │   (Firebase)    │
-└───────────────┘    └─────────────────────┘    └─────────────────┘
+                                  │
+                    ┌─────────────┼─────────────┐
+                    │             │             │
+                    ▼             ▼             ▼
+        ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+        │ Notification API│ │ Subscription API│ │ Processor Worker│
+        │   (Interno)     │ │   (Interno)     │ │   (Interno)     │
+        │ ❌ Sem Porta    │ │ ❌ Sem Porta    │ │ Background Svc  │
+        │    Externa      │ │    Externa      │ │                 │
+        └─────────┬───────┘ └─────────────────┘ └─────────┬───────┘
+                  │                                       │
+                  ▼                                       ▼
+        ┌─────────────────┐                    ┌─────────────────┐
+        │ In-Memory Store │                    │ Message Providers│
+        │  (Demo Mode)    │                    │ Email│SMS│Push  │
+        └─────────────────┘                    └─────────────────┘
 ```
+
+### 🔄 **Fluxo de Comunicação:**
+1. **Cliente** → Gateway API (porta 5000)
+2. **Gateway** → Microserviços internos (sem exposição externa)
+3. **Microserviços** → Repositórios/Provedores
 
 ## 🚀 Microserviços
 
-### 1. Gateway API (Porta 5000)
-- **Responsabilidade**: Ponto único de entrada, roteamento e agregação
-- **Tecnologias**: .NET 8, Serilog, Swagger
+### 1. 🌐 Gateway API (Porta 5000) - **PONTO ÚNICO DE ENTRADA**
+- **Responsabilidade**: API Gateway completo com todos os endpoints
+- **Tecnologias**: .NET 8, Serilog, Swagger, HttpClient
 - **Funcionalidades**:
-  - Roteamento para microserviços
-  - Health checks centralizados
-  - Logging estruturado
-  - Documentação Swagger
+  - ✅ **Todos os endpoints** de Notification e Subscription
+  - ✅ Roteamento inteligente para microserviços internos
+  - ✅ Health checks centralizados
+  - ✅ Logging estruturado com correlação
+  - ✅ Documentação Swagger unificada
+  - ✅ Tratamento de erros centralizado
 
-### 2. Notification API (Porta 5001)
+### 2. 📧 Notification API (Interno - Sem Porta Externa)
 - **Responsabilidade**: Gerenciamento do ciclo de vida das notificações
-- **Tecnologias**: .NET 8, Azure Cosmos DB, Azure Service Bus
+- **Tecnologias**: .NET 8, In-Memory Repository (demo), Azure Service Bus
 - **Funcionalidades**:
-  - CRUD de notificações
-  - Enfileiramento para processamento assíncrono
-  - Rastreamento de status
-  - Suporte a múltiplos canais
+  - ✅ CRUD completo de notificações
+  - ✅ Enfileiramento para processamento assíncrono
+  - ✅ Rastreamento de status em tempo real
+  - ✅ Suporte a múltiplos canais (Email, SMS, Push)
+  - ✅ Sistema de prioridades
+  - ⚠️ **Acesso apenas via Gateway**
 
-### 3. Subscription API (Porta 5002)
-- **Responsabilidade**: Gerenciamento de preferências de usuários
-- **Tecnologias**: .NET 8, Azure Cosmos DB
+### 3. ⚙️ Subscription API (Interno - Sem Porta Externa)
+- **Responsabilidade**: Gerenciamento avançado de preferências
+- **Tecnologias**: .NET 8, In-Memory Repository (demo)
 - **Funcionalidades**:
-  - Preferências por canal (Email, SMS, Push)
-  - Categorização de notificações
-  - Horários de silêncio (Quiet Hours)
-  - Validações inteligentes
+  - ✅ Preferências granulares por canal
+  - ✅ Categorização inteligente de notificações
+  - ✅ Horários de silêncio com timezone
+  - ✅ Validações de preferências em tempo real
+  - ✅ Sistema de subscrições flexível
+  - ⚠️ **Acesso apenas via Gateway**
 
-### 4. Processor Worker
-- **Responsabilidade**: Processamento assíncrono de notificações
-- **Tecnologias**: .NET 8 Worker Service, Azure Service Bus
+### 4. 🔄 Processor Worker (Background Service)
+- **Responsabilidade**: Processamento assíncrono e entrega
+- **Tecnologias**: .NET 8 Worker Service, Provedores simulados
 - **Funcionalidades**:
-  - Consumo de mensagens do Service Bus
-  - Integração com provedores externos
-  - Tratamento robusto de erros
-  - Modo simulação para desenvolvimento
+  - ✅ Processamento assíncrono de notificações
+  - ✅ Integração com provedores simulados
+  - ✅ Validação de preferências antes do envio
+  - ✅ Tratamento robusto de erros e retry
+  - ✅ Modo simulação para desenvolvimento
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -115,10 +140,10 @@ cd MultiChannel-Notification-System
 docker-compose up --build
 ```
 
-3. **Acesse os serviços**:
-- Gateway API: http://localhost:5000/swagger
-- Notification API: http://localhost:5001/swagger
-- Subscription API: http://localhost:5002/swagger
+3. **Acesse o sistema**:
+- **Gateway API (ÚNICO PONTO DE ENTRADA)**: http://localhost:5000/swagger
+- **Health Check**: http://localhost:5000/health
+- ⚠️ **Microserviços internos não são acessíveis diretamente**
 
 ### Execução Local com .NET
 
@@ -196,10 +221,12 @@ Services__SubscriptionAPI=http://subscription-api
 ### Docker Compose
 
 O arquivo `docker-compose.yml` está configurado para desenvolvimento local com:
-- Rede compartilhada entre serviços
-- Variáveis de ambiente pré-configuradas
-- Mapeamento de portas
-- Dependências entre serviços
+- ✅ **Rede compartilhada** entre serviços
+- ✅ **Variáveis de ambiente** pré-configuradas
+- ✅ **Apenas Gateway exposto** (porta 5000)
+- ✅ **Microserviços internos** sem exposição externa
+- ✅ **Dependências** entre serviços configuradas
+- ✅ **Repositórios em memória** para demonstração
 
 ## 📊 Monitoramento e Observabilidade
 
@@ -221,6 +248,20 @@ O arquivo `docker-compose.yml` está configurado para desenvolvimento local com:
 - Métricas de negócio e técnicas
 
 ## 🧪 Testes
+
+### 🚀 **Collection Insomnia (Disponível)**
+- ✅ **Collection completa** para testes de todos os endpoints
+- ✅ **Arquivo**: `insomnia-collection.json`
+- ✅ **Guia detalhado**: `INSOMNIA_GUIDE.md`
+- ✅ **Cenários de teste** pré-configurados
+- ✅ **Variáveis de ambiente** configuradas
+- ✅ **Fluxos completos** de notificação
+
+**Como usar:**
+1. Importe `insomnia-collection.json` no Insomnia
+2. Siga o guia em `INSOMNIA_GUIDE.md`
+3. Execute os cenários de teste
+4. Todos os requests passam pelo Gateway (porta 5000)
 
 ### Estrutura de Testes (Planejado)
 ```
@@ -245,10 +286,14 @@ tests/
 ## 🚀 Roadmap
 
 ### Fase 1 - MVP ✅
-- [x] Arquitetura de microserviços
-- [x] APIs RESTful
-- [x] Processamento assíncrono
-- [x] Containerização
+- [x] **Arquitetura de microserviços** completa
+- [x] **API Gateway** como ponto único de entrada
+- [x] **APIs RESTful** com todos os endpoints
+- [x] **Processamento assíncrono** funcional
+- [x] **Containerização** com Docker Compose
+- [x] **Collection Insomnia** para testes
+- [x] **Repositórios em memória** para demonstração
+- [x] **Documentação** completa e atualizada
 
 ### Fase 2 - Produção 🔄
 - [ ] Integração com provedores reais

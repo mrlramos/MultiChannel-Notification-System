@@ -24,32 +24,34 @@ docker-compose ps
 ```
 
 Você deve ver 4 containers rodando:
-- `gateway-api` (porta 5000)
-- `notification-api` (porta 5001)
-- `subscription-api` (porta 5002)
-- `processor-worker`
+- `gateway-api` (porta 5000) - **ÚNICO PONTO DE ENTRADA**
+- `notification-api` (interno, sem porta exposta)
+- `subscription-api` (interno, sem porta exposta)
+- `processor-worker` (interno)
 
 ## 🔧 Configuração das Variáveis
 
 A collection já vem com as variáveis configuradas:
 
-- `base_url_gateway`: `http://localhost:5000`
-- `base_url_notification`: `http://localhost:5001`
-- `base_url_subscription`: `http://localhost:5002`
+- `base_url_gateway`: `http://localhost:5000` (único ponto de entrada)
 - `notification_id`: `coloque_aqui_o_id_da_notificacao`
+
+**⚠️ IMPORTANTE**: Agora todos os requests passam pelo Gateway! Os microserviços não são mais acessíveis diretamente.
 
 ## 📋 Fluxo de Testes Recomendado
 
 ### 1. **Health Checks** (Verificar se tudo está funcionando)
 Execute na ordem:
 1. `Gateway API > Gateway - Health Check`
-2. `Notification API > Health Check`
-3. `Subscription API > Health Check`
+2. `Notifications (via Gateway) > Health Check via Gateway`
+3. `Subscriptions (via Gateway) > Health Check via Gateway`
 
 **Resultado esperado**: Status 200 com `"Healthy"`
 
+**✅ Agora tudo passa pelo Gateway!** Não há mais acesso direto aos microserviços.
+
 ### 2. **Criar Subscrição de Usuário**
-Execute: `Subscription API > Criar Subscrição`
+Execute: `Subscriptions (via Gateway) > Criar Subscrição`
 
 **Payload incluído**:
 ```json
@@ -91,10 +93,10 @@ Execute: `Subscription API > Criar Subscrição`
 ```
 
 ### 3. **Verificar Subscrição Criada**
-Execute: `Subscription API > Buscar Subscrição`
+Execute: `Subscriptions (via Gateway) > Buscar Subscrição`
 
 ### 4. **Criar Notificação**
-Execute: `Notification API > Criar Notificação`
+Execute: `Notifications (via Gateway) > Criar Notificação`
 
 **Payload incluído**:
 ```json
@@ -121,27 +123,28 @@ Execute: `Notification API > Criar Notificação`
 
 ### 6. **Testar Outros Endpoints**
 Agora você pode testar:
-- `Notification API > Buscar Notificação por ID`
-- `Notification API > Listar Notificações do Usuário`
-- `Notification API > Processar Notificação`
-- `Subscription API > Validar Preferências`
+- `Notifications (via Gateway) > Buscar Notificação por ID`
+- `Notifications (via Gateway) > Listar Notificações do Usuário`
+- `Notifications (via Gateway) > Processar Notificação`
+- `Subscriptions (via Gateway) > Validar Preferências`
 
 ## 🎯 Cenários de Teste Específicos
 
-### Cenário 1: Notificação via Gateway
-Execute: `Gateway API > Gateway - Criar Notificação`
-- Testa o roteamento através do API Gateway
+### Cenário 1: Fluxo Completo de Notificação
+1. `Subscriptions (via Gateway) > Criar Subscrição`
+2. `Notifications (via Gateway) > Criar Notificação`
+3. `Notifications (via Gateway) > Processar Notificação`
 
 ### Cenário 2: Atualizar Preferências
-Execute: `Subscription API > Atualizar Subscrição`
+Execute: `Subscriptions (via Gateway) > Atualizar Subscrição`
 - Testa a atualização de preferências do usuário
 
 ### Cenário 3: Validação de Preferências
-Execute: `Subscription API > Validar Preferências`
+Execute: `Subscriptions (via Gateway) > Validar Preferências`
 - Testa se o usuário pode receber determinado tipo de notificação
 
 ### Cenário 4: Cancelar Notificação
-Execute: `Notification API > Cancelar Notificação`
+Execute: `Notifications (via Gateway) > Cancelar Notificação`
 - Testa o cancelamento de uma notificação pendente
 
 ## 🔍 Monitoramento dos Logs

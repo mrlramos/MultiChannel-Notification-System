@@ -1,10 +1,11 @@
 using Serilog;
-using Microsoft.Azure.Cosmos;
-using Azure.Messaging.ServiceBus;
 using Notification.API.Services;
 using Notification.API.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configurar URLs
+builder.WebHost.UseUrls("http://0.0.0.0:80");
 
 // Configurar Serilog
 builder.Host.UseSerilog((context, configuration) =>
@@ -37,24 +38,10 @@ builder.Services.AddCors(options =>
 // Adicionar Health Checks
 builder.Services.AddHealthChecks();
 
-// Configurar Azure Cosmos DB
-builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("CosmosDB");
-    return new CosmosClient(connectionString ?? "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
-});
-
-// Configurar Azure Service Bus
-builder.Services.AddSingleton<ServiceBusClient>(serviceProvider =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("ServiceBus");
-    return new ServiceBusClient(connectionString ?? "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=fake");
-});
-
-// Registrar serviços de domínio
-builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+// Registrar serviços de domínio (usando implementações em memória)
+builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IMessageQueueService, ServiceBusMessageQueueService>();
+builder.Services.AddScoped<IMessageQueueService, InMemoryMessageQueueService>();
 
 var app = builder.Build();
 

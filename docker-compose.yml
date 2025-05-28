@@ -45,6 +45,22 @@ services:
     networks:
       - notification-network
 
+  processor-worker:
+    build:
+      context: ./src/Services/Processor.Worker
+      dockerfile: Dockerfile
+    container_name: processor-worker
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__ServiceBus=Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=fake
+      - Services__NotificationAPI=http://notification-api
+      - Services__SubscriptionAPI=http://subscription-api
+    networks:
+      - notification-network
+    depends_on:
+      - notification-api
+      - subscription-api
+
 networks:
   notification-network:
     driver: bridge 
